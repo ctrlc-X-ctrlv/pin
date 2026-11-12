@@ -18,9 +18,9 @@
             padding: 15px; 
             display: flex; 
             gap: 20px; 
-            height: 100vh; /* Tinggi pas 1 layar */
+            height: 100vh; 
             box-sizing: border-box;
-            overflow: hidden; /* Menghilangkan scrollbar */
+            overflow: hidden; 
         }
         
         /* Panel Kiri: Kontrol */
@@ -32,7 +32,7 @@
             width: 300px; 
             display: flex;
             flex-direction: column;
-            gap: 15px; /* Jarak antar input */
+            gap: 15px; 
             flex-shrink: 0;
         }
         
@@ -73,7 +73,7 @@
         button { background-color: #e60023; color: white; border: none; padding: 15px; margin-top: auto; font-size: 15px; font-weight: bold; border-radius: 5px; cursor: pointer; transition: 0.3s; }
         button:hover { background-color: #ad081b; }
         
-        /* Canvas (Pratinjau) otomatis menyesuaikan ukuran layar tanpa mengubah resolusi asli */
+        /* Canvas (Pratinjau) otomatis menyesuaikan ukuran layar */
         canvas { 
             border-radius: 10px; 
             box-shadow: 0 10px 20px rgba(0,0,0,0.2); 
@@ -87,7 +87,6 @@
 </head>
 <body>
 
-    <!-- Panel Kiri: Input -->
     <div class="panel-kontrol">
         <textarea id="titleText" placeholder="Judul Gambar..." oninput="drawCanvas()"></textarea>
         
@@ -104,7 +103,6 @@
         <button onclick="downloadPin()">Unduh Pin</button>
     </div>
 
-    <!-- Panel Tengah: Layout -->
     <div class="panel-desain">
         <div id="btn-desain-1" class="desain-item active" onclick="changeDesign(1)">Layout 1</div>
         <div id="btn-desain-2" class="desain-item" onclick="changeDesign(2)">Layout 2</div>
@@ -112,9 +110,7 @@
         <div id="btn-desain-4" class="desain-item" onclick="changeDesign(4)">Layout 4</div>
     </div>
 
-    <!-- Panel Kanan: Preview -->
     <div class="panel-preview">
-        <!-- Resolusi unduhan tetap 1000x1500 -->
         <canvas id="pinCanvas" width="1000" height="1500"></canvas>
     </div>
 
@@ -392,6 +388,7 @@
         function downloadPin() {
             let rawInterior = document.getElementById('metaInterior').value.trim() || 'Interior';
             let rawRoom = document.getElementById('metaRoom').value.trim() || 'Room';
+            let metaAuthor = document.getElementById('website').value.trim() || 'Author'; // Mengambil nama website
             
             let baseName = `${rawInterior} ${rawRoom} interior design ideas and home decor inspiration`;
             let formattedFileName = baseName.toLowerCase().replace(/\s+/g, '-') + '.jpg';
@@ -406,10 +403,12 @@
                 if (typeof piexif !== 'undefined') {
                     var zeroth = {};
                     zeroth[piexif.ImageIFD.Rating] = 5; 
-                    zeroth[40091] = toUCS2Array(metaTitleSubject); 
-                    zeroth[40095] = toUCS2Array(metaTitleSubject); 
-                    zeroth[40094] = toUCS2Array(metaTags);         
-                    zeroth[40092] = toUCS2Array(metaComment);      
+                    zeroth[40091] = toUCS2Array(metaTitleSubject); // Title
+                    zeroth[40095] = toUCS2Array(metaTitleSubject); // Subject
+                    zeroth[40094] = toUCS2Array(metaTags);         // Tags
+                    zeroth[40092] = toUCS2Array(metaComment);      // Comment
+                    zeroth[40093] = toUCS2Array(metaAuthor);       // Author (Origin)
+                    
                     var exifObj = {"0th": zeroth, "Exif": {}, "GPS": {}};
                     var exifBytes = piexif.dump(exifObj);
                     jpegData = piexif.insert(exifBytes, jpegData);
