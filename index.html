@@ -6,80 +6,115 @@
     <title>Alat Pembuat Pin Pinterest</title>
     <!-- Import Font League Spartan -->
     <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@700&display=swap" rel="stylesheet">
+    <!-- Library Piexifjs untuk memanipulasi EXIF / Metadata Gambar -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/piexifjs/1.0.6/piexif.min.js"></script>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; margin: 0; padding: 20px; display: flex; gap: 30px; align-items: flex-start; justify-content: center; }
+        /* Mengunci layar agar pas 1 window dan tidak ada scroll */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #f3f4f6; 
+            margin: 0; 
+            padding: 15px; 
+            display: flex; 
+            gap: 20px; 
+            height: 100vh; /* Tinggi pas 1 layar */
+            box-sizing: border-box;
+            overflow: hidden; /* Menghilangkan scrollbar */
+        }
         
         /* Panel Kiri: Kontrol */
-        .panel-kontrol { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 380px; max-height: 95vh; overflow-y: auto; flex-shrink: 0; }
+        .panel-kontrol { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+            width: 300px; 
+            display: flex;
+            flex-direction: column;
+            gap: 15px; /* Jarak antar input */
+            flex-shrink: 0;
+        }
         
         /* Panel Tengah: Pilihan Desain */
-        .panel-desain { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 220px; max-height: 95vh; overflow-y: auto; flex-shrink: 0; }
-        .panel-desain h3 { margin-top: 0; font-size: 16px; color: #333; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; text-align: center; }
+        .panel-desain { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+            width: 120px; 
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex-shrink: 0;
+        }
         
         /* Tombol List Desain */
-        .desain-item { padding: 12px; margin-bottom: 10px; background: #f8f9fa; border: 2px solid transparent; border-radius: 8px; cursor: pointer; text-align: center; font-weight: bold; color: #555; transition: 0.3s; font-size: 14px; }
+        .desain-item { padding: 12px; background: #f8f9fa; border: 2px solid transparent; border-radius: 8px; cursor: pointer; text-align: center; font-weight: bold; color: #555; transition: 0.3s; font-size: 14px; }
         .desain-item.active { border-color: #e60023; background: #ffebee; color: #e60023; }
         .desain-item:hover:not(.active) { border-color: #ccc; }
 
         /* Panel Kanan: Pratinjau Canvas */
-        .panel-preview { display: flex; flex-direction: column; align-items: center; }
+        .panel-preview { 
+            flex-grow: 1; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100%;
+        }
         
-        label { display: block; margin-top: 15px; font-weight: bold; color: #555; font-size: 14px; }
-        .panel-kontrol > label:first-child { margin-top: 0; } 
-        input[type="text"], input[type="file"], textarea { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-family: inherit; }
-        input[type="range"] { width: 100%; margin-top: 5px; cursor: pointer; }
-        textarea { resize: vertical; min-height: 80px; font-size: 16px; font-weight: bold; }
-        button { background-color: #e60023; color: white; border: none; padding: 12px 20px; margin-top: 20px; width: 100%; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; transition: 0.3s; }
+        /* Elemen Input */
+        input[type="text"], textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-family: inherit; font-size: 13px; }
+        textarea { resize: none; height: 100px; font-size: 16px; font-weight: bold; }
+        input[type="range"] { width: 100%; cursor: pointer; }
+        input[type="file"] { width: 100%; padding: 12px; box-sizing: border-box; background: #e3f2fd; border: 1px dashed #2196f3; border-radius: 5px; cursor: pointer; font-size: 12px; color: #0d47a1; }
+        
+        /* Tombol Unduh */
+        button { background-color: #e60023; color: white; border: none; padding: 15px; margin-top: auto; font-size: 15px; font-weight: bold; border-radius: 5px; cursor: pointer; transition: 0.3s; }
         button:hover { background-color: #ad081b; }
         
-        .unggah-grup { background: #e3f2fd; padding: 15px; border-radius: 8px; margin-top: 20px; border: 1px dashed #2196f3; }
-        .unggah-grup label { margin-top: 0; color: #0d47a1; }
-        .petunjuk-unggah { font-size: 12px; color: #1565c0; margin-top: 5px; margin-bottom: 10px; }
-        
-        canvas { border-radius: 10px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); max-width: 100%; height: auto; background: white; width: 400px; cursor: default; }
-        
-        .flex-row { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
-        .flex-row label { margin-top: 0; }
-        .ukuran-badge { background: #eee; padding: 2px 8px; border-radius: 5px; font-size: 12px; }
+        /* Canvas (Pratinjau) otomatis menyesuaikan ukuran layar tanpa mengubah resolusi asli */
+        canvas { 
+            border-radius: 10px; 
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2); 
+            max-height: 100%; 
+            max-width: 100%; 
+            aspect-ratio: 2 / 3;
+            background: white; 
+            cursor: default; 
+        }
     </style>
 </head>
 <body>
 
+    <!-- Panel Kiri: Input -->
     <div class="panel-kontrol">
-        <label>Judul Utama:</label>
-        <textarea id="titleText" oninput="drawCanvas()"></textarea>
+        <textarea id="titleText" placeholder="Judul Gambar..." oninput="drawCanvas()"></textarea>
         
-        <div class="flex-row">
-            <label>Ukuran Font Judul:</label>
-            <span id="ukuranVal" class="ukuran-badge">115px</span>
-        </div>
-        <input type="range" id="titleSize" min="50" max="200" value="115" oninput="updateSizeLabel(); drawCanvas()">
+        <input type="range" id="titleSize" min="50" max="200" value="115" oninput="drawCanvas()" title="Geser untuk ubah ukuran font">
 
-        <label>Nama Website:</label>
-        <input type="text" id="website" value="www.cozyhomepieces.com" oninput="drawCanvas()">
+        <input type="text" id="website" value="www.cozyhomepieces.com" placeholder="www.website.com" oninput="drawCanvas()">
 
-        <div class="unggah-grup">
-            <label>📸 Unggah Gambar (Pilih 3)</label>
-            <div class="petunjuk-unggah">Tekan CTRL (Win) atau CMD (Mac) saat memilih gambar.</div>
-            <input type="file" id="imgUpload" accept="image/*" multiple onchange="loadImages(event)">
-        </div>
+        <input type="file" id="imgUpload" accept="image/*" multiple onchange="loadImages(event)" title="Pilih maksimal 3 gambar">
 
-        <label>Nama File Unduhan:</label>
-        <input type="text" id="fileName" value="">
+        <input type="text" id="metaInterior" placeholder="INTERIOR STYLE (Misal: Japandi)">
+        
+        <input type="text" id="metaRoom" placeholder="ROOM TYPE (Misal: Balcony)">
 
-        <button onclick="downloadPin()">📥 Unduh Gambar Pin</button>
+        <button onclick="downloadPin()">Unduh Pin</button>
     </div>
 
+    <!-- Panel Tengah: Layout -->
     <div class="panel-desain">
-        <h3>Pilih Desain Layout</h3>
         <div id="btn-desain-1" class="desain-item active" onclick="changeDesign(1)">Layout 1</div>
         <div id="btn-desain-2" class="desain-item" onclick="changeDesign(2)">Layout 2</div>
         <div id="btn-desain-3" class="desain-item" onclick="changeDesign(3)">Layout 3</div>
         <div id="btn-desain-4" class="desain-item" onclick="changeDesign(4)">Layout 4</div>
     </div>
 
+    <!-- Panel Kanan: Preview -->
     <div class="panel-preview">
+        <!-- Resolusi unduhan tetap 1000x1500 -->
         <canvas id="pinCanvas" width="1000" height="1500"></canvas>
     </div>
 
@@ -92,10 +127,6 @@
         document.fonts.ready.then(function() {
             drawCanvas();
         });
-
-        function updateSizeLabel() {
-            document.getElementById('ukuranVal').innerText = document.getElementById('titleSize').value + 'px';
-        }
 
         const imgState = {
             1: { img: null, offsetX: 0, offsetY: 0, box: {x: 25, y: 400, w: 950, h: 600} },
@@ -127,10 +158,7 @@
                 imgState[2].box = {x: 500, y: 0, w: 500, h: 680};
                 imgState[3].box = {x: 40, y: 1040, w: 960, h: 460};
             } else if (id === 4) {
-                // Layout 4: Gap putih tipis (6px) memisahkan antar blok.
-                // Gambar 1 Full Atas
                 imgState[1].box = {x: 0, y: 0, w: 1000, h: 544};
-                // Gambar 2 & 3 Full Bawah 
                 imgState[2].box = {x: 0, y: 906, w: 497, h: 594};
                 imgState[3].box = {x: 503, y: 906, w: 497, h: 594};
             }
@@ -141,13 +169,10 @@
         function loadImages(event) {
             const files = event.target.files;
             if (!files || files.length === 0) return;
-
             const numToProcess = Math.min(files.length, 3);
-
             for (let i = 0; i < numToProcess; i++) {
                 const file = files[i];
                 const id = i + 1; 
-
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const img = new Image();
@@ -172,26 +197,17 @@
             const rect = canvas.getBoundingClientRect();
             const scaleX = canvas.width / rect.width;
             const scaleY = canvas.height / rect.height;
-            return {
-                x: (evt.clientX - rect.left) * scaleX,
-                y: (evt.clientY - rect.top) * scaleY
-            };
+            return { x: (evt.clientX - rect.left) * scaleX, y: (evt.clientY - rect.top) * scaleY };
         }
 
         canvas.addEventListener('mousedown', (e) => {
             const pos = getMousePos(e);
             for (let id = 1; id <= 3; id++) {
                 const box = imgState[id].box;
-                if (pos.x >= box.x && pos.x <= box.x + box.w && 
-                    pos.y >= box.y && pos.y <= box.y + box.h) {
-                    
+                if (pos.x >= box.x && pos.x <= box.x + box.w && pos.y >= box.y && pos.y <= box.y + box.h) {
                     if (imgState[id].img) {
-                        isDragging = true;
-                        activeImageId = id;
-                        startMouseX = pos.x;
-                        startMouseY = pos.y;
-                        canvas.style.cursor = 'grabbing';
-                        break;
+                        isDragging = true; activeImageId = id; startMouseX = pos.x; startMouseY = pos.y;
+                        canvas.style.cursor = 'grabbing'; break;
                     }
                 }
             }
@@ -199,43 +215,25 @@
 
         canvas.addEventListener('mousemove', (e) => {
             const pos = getMousePos(e);
-            
             if (!isDragging) {
                 let hoverImage = false;
                 for (let id = 1; id <= 3; id++) {
                     const box = imgState[id].box;
-                    if (pos.x >= box.x && pos.x <= box.x + box.w && pos.y >= box.y && pos.y <= box.y + box.h && imgState[id].img) {
-                        hoverImage = true;
-                        break;
-                    }
+                    if (pos.x >= box.x && pos.x <= box.x + box.w && pos.y >= box.y && pos.y <= box.y + box.h && imgState[id].img) { hoverImage = true; break; }
                 }
-                canvas.style.cursor = hoverImage ? 'grab' : 'default';
-                return;
+                canvas.style.cursor = hoverImage ? 'grab' : 'default'; return;
             }
 
-            const dx = pos.x - startMouseX;
-            const dy = pos.y - startMouseY;
-            
-            const state = imgState[activeImageId];
-            const img = state.img;
-            const box = state.box;
-            
+            const dx = pos.x - startMouseX; const dy = pos.y - startMouseY;
+            const state = imgState[activeImageId]; const img = state.img; const box = state.box;
             const scale = Math.max(box.w / img.width, box.h / img.height);
-            const scaledW = img.width * scale;
-            const scaledH = img.height * scale;
-            
-            const maxOffsetX = (scaledW - box.w) / 2;
-            const maxOffsetY = (scaledH - box.h) / 2;
+            const scaledW = img.width * scale; const scaledH = img.height * scale;
+            const maxOffsetX = (scaledW - box.w) / 2; const maxOffsetY = (scaledH - box.h) / 2;
 
-            state.offsetX += dx;
-            state.offsetY += dy;
-            
+            state.offsetX += dx; state.offsetY += dy;
             state.offsetX = Math.max(-maxOffsetX, Math.min(maxOffsetX, state.offsetX));
             state.offsetY = Math.max(-maxOffsetY, Math.min(maxOffsetY, state.offsetY));
-            
-            startMouseX = pos.x;
-            startMouseY = pos.y;
-            
+            startMouseX = pos.x; startMouseY = pos.y;
             drawCanvas(); 
         });
 
@@ -245,290 +243,184 @@
         function drawDraggableRoundedImage(imgData, radius, drawBorder = false) {
             const { img, offsetX, offsetY, box } = imgData;
             const { x, y, w, h } = box;
-            
-            ctx.save();
-            ctx.beginPath();
+            ctx.save(); ctx.beginPath();
             if (radius > 0) {
-                ctx.moveTo(x + radius, y);
-                ctx.lineTo(x + w - radius, y);
-                ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
-                ctx.lineTo(x + w, y + h - radius);
-                ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
-                ctx.lineTo(x + radius, y + h);
-                ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
-                ctx.lineTo(x, y + radius);
-                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.moveTo(x + radius, y); ctx.lineTo(x + w - radius, y); ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+                ctx.lineTo(x + w, y + h - radius); ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+                ctx.lineTo(x + radius, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+                ctx.lineTo(x, y + radius); ctx.quadraticCurveTo(x, y, x + radius, y);
             } else {
                 ctx.rect(x, y, w, h);
             }
-            ctx.closePath();
-            
-            ctx.save();
-            ctx.clip();
-            
+            ctx.closePath(); ctx.save(); ctx.clip();
             const scale = Math.max(w / img.width, h / img.height);
-            const scaledW = img.width * scale;
-            const scaledH = img.height * scale;
-            
-            const dx = x + (w - scaledW) / 2 + offsetX;
-            const dy = y + (h - scaledH) / 2 + offsetY;
-            
-            ctx.drawImage(img, dx, dy, scaledW, scaledH);
-            ctx.restore(); 
-            
-            if (drawBorder) {
-                ctx.lineWidth = 2; 
-                ctx.strokeStyle = "#FFFFFF";
-                ctx.stroke();
-            }
-            
+            const scaledW = img.width * scale; const scaledH = img.height * scale;
+            const dx = x + (w - scaledW) / 2 + offsetX; const dy = y + (h - scaledH) / 2 + offsetY;
+            ctx.drawImage(img, dx, dy, scaledW, scaledH); ctx.restore(); 
+            if (drawBorder) { ctx.lineWidth = 2; ctx.strokeStyle = "#FFFFFF"; ctx.stroke(); }
             ctx.restore(); 
         }
 
         function drawWrappedText(context, text, x, y, maxWidth, fontSize) {
             context.font = `bold ${fontSize}px 'League Spartan', sans-serif`;
-            const words = text.split(' ');
-            let line = '';
-            const lines = [];
-
+            const words = text.split(' '); let line = ''; const lines = [];
             for (let i = 0; i < words.length; i++) {
-                const testLine = line + words[i] + ' ';
-                const metrics = context.measureText(testLine);
-                if (metrics.width > maxWidth && i > 0) {
-                    lines.push(line);
-                    line = words[i] + ' ';
-                } else {
-                    line = testLine;
-                }
+                const testLine = line + words[i] + ' '; const metrics = context.measureText(testLine);
+                if (metrics.width > maxWidth && i > 0) { lines.push(line); line = words[i] + ' '; } else { line = testLine; }
             }
             lines.push(line);
-
-            const lineHeight = fontSize * 1.1; 
-            const totalHeight = lines.length * lineHeight;
+            const lineHeight = fontSize * 1.1; const totalHeight = lines.length * lineHeight;
             let currentY = y - (totalHeight / 2) + (lineHeight / 2);
-
             for (let i = 0; i < lines.length; i++) {
-                context.fillText(lines[i].trim(), x, currentY);
-                currentY += lineHeight;
+                context.fillText(lines[i].trim(), x, currentY); currentY += lineHeight;
             }
         }
 
         function drawCanvas() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            if (activeDesign === 1) {
-                drawDesign1();
-            } else if (activeDesign === 2) {
-                drawDesign2();
-            } else if (activeDesign === 3) {
-                drawDesign3();
-            } else if (activeDesign === 4) {
-                drawDesign4();
-            }
+            if (activeDesign === 1) drawDesign1();
+            else if (activeDesign === 2) drawDesign2();
+            else if (activeDesign === 3) drawDesign3();
+            else if (activeDesign === 4) drawDesign4();
         }
 
         function drawDesign1() {
             const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
-            gradient.addColorStop(0, "#a77d43"); 
-            gradient.addColorStop(1, "#71836d"); 
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            ctx.fillStyle = "#FFFFFF";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
+            gradient.addColorStop(0, "#a77d43"); gradient.addColorStop(1, "#71836d"); 
+            ctx.fillStyle = gradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#FFFFFF"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
             const titleText = document.getElementById('titleText').value;
             const titleSize = parseInt(document.getElementById('titleSize').value);
-            
-            if (titleText.trim() !== '') {
-                drawWrappedText(ctx, titleText, 500, 190, 900, titleSize);
-            }
+            if (titleText.trim() !== '') drawWrappedText(ctx, titleText, 500, 190, 900, titleSize);
             ctx.textBaseline = "alphabetic"; 
-
             const website = document.getElementById('website').value;
             const webY = 370; 
-            ctx.fillStyle = "#FFFFFF";
-            ctx.font = "28px 'Segoe UI', Arial";
-            ctx.fillText(website, 500, webY);
-            
+            ctx.fillStyle = "#FFFFFF"; ctx.font = "28px 'Segoe UI', Arial"; ctx.fillText(website, 500, webY);
             ctx.beginPath(); ctx.moveTo(150, webY - 8); ctx.lineTo(250, webY - 8); ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = 3; ctx.stroke();
-            ctx.beginPath(); ctx.arc(150, webY - 8, 6, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.arc(250, webY - 8, 6, 0, Math.PI * 2); ctx.fill();
-
+            ctx.beginPath(); ctx.arc(150, webY - 8, 6, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(250, webY - 8, 6, 0, Math.PI * 2); ctx.fill();
             ctx.beginPath(); ctx.moveTo(750, webY - 8); ctx.lineTo(850, webY - 8); ctx.stroke();
-            ctx.beginPath(); ctx.arc(750, webY - 8, 6, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.arc(850, webY - 8, 6, 0, Math.PI * 2); ctx.fill();
-
+            ctx.beginPath(); ctx.arc(750, webY - 8, 6, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(850, webY - 8, 6, 0, Math.PI * 2); ctx.fill();
             const radius = 25;
             for (let id = 1; id <= 3; id++) {
-                if (imgState[id].img) {
-                    drawDraggableRoundedImage(imgState[id], radius, true);
-                } else {
-                    const box = imgState[id].box;
-                    ctx.fillStyle = "rgba(0,0,0,0.3)";
-                    ctx.beginPath(); ctx.roundRect(box.x, box.y, box.w, box.h, radius); ctx.fill();
-                    ctx.lineWidth = 2; ctx.strokeStyle = "#FFFFFF"; ctx.stroke(); 
-                    ctx.fillStyle = "#FFFFFF"; ctx.font = "30px Arial"; 
-                    ctx.fillText("Gambar " + id, box.x + (box.w/2), box.y + (box.h/2));
+                if (imgState[id].img) drawDraggableRoundedImage(imgState[id], radius, true);
+                else {
+                    const box = imgState[id].box; ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.roundRect(box.x, box.y, box.w, box.h, radius); ctx.fill();
+                    ctx.lineWidth = 2; ctx.strokeStyle = "#FFFFFF"; ctx.stroke(); ctx.fillStyle = "#FFFFFF"; ctx.font = "30px Arial"; ctx.fillText("Gambar " + id, box.x + (box.w/2), box.y + (box.h/2));
                 }
             }
         }
 
         function drawDesign2() {
-            ctx.fillStyle = "#FFFFFF";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
+            ctx.fillStyle = "#FFFFFF"; ctx.fillRect(0, 0, canvas.width, canvas.height);
             const radius = 0; 
             for (let id = 1; id <= 3; id++) {
-                if (imgState[id].img) {
-                    drawDraggableRoundedImage(imgState[id], radius, false);
-                } else {
-                    const box = imgState[id].box;
-                    ctx.fillStyle = "rgba(0,0,0,0.15)";
-                    ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); ctx.fill();
-                    ctx.fillStyle = "#555555"; ctx.font = "30px Arial"; 
-                    ctx.fillText("Gambar " + id, box.x + (box.w/2), box.y + (box.h/2));
+                if (imgState[id].img) drawDraggableRoundedImage(imgState[id], radius, false);
+                else {
+                    const box = imgState[id].box; ctx.fillStyle = "rgba(0,0,0,0.15)"; ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); ctx.fill();
+                    ctx.fillStyle = "#555555"; ctx.font = "30px Arial"; ctx.fillText("Gambar " + id, box.x + (box.w/2), box.y + (box.h/2));
                 }
             }
-
-            const boxW = 900;
-            const boxH = 480;
-            const boxX = (canvas.width - boxW) / 2;
-            const boxY = (canvas.height - boxH) / 2;
-
-            ctx.fillStyle = "#FFFFFF";
-            ctx.beginPath();
-            ctx.roundRect(boxX, boxY, boxW, boxH, 40);
-            ctx.fill();
-
+            const boxW = 900; const boxH = 480; const boxX = (canvas.width - boxW) / 2; const boxY = (canvas.height - boxH) / 2;
+            ctx.fillStyle = "#FFFFFF"; ctx.beginPath(); ctx.roundRect(boxX, boxY, boxW, boxH, 40); ctx.fill();
             const textGradient = ctx.createLinearGradient(boxX, 0, boxX + boxW, 0);
-            textGradient.addColorStop(0, "#a77d43"); 
-            textGradient.addColorStop(1, "#71836d"); 
-            
-            ctx.fillStyle = textGradient;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            const titleText = document.getElementById('titleText').value;
-            const titleSize = parseInt(document.getElementById('titleSize').value);
-            
-            if (titleText.trim() !== '') {
-                drawWrappedText(ctx, titleText, 500, boxY + 200, boxW - 100, titleSize);
-            }
+            textGradient.addColorStop(0, "#a77d43"); textGradient.addColorStop(1, "#71836d"); 
+            ctx.fillStyle = textGradient; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            const titleText = document.getElementById('titleText').value; const titleSize = parseInt(document.getElementById('titleSize').value);
+            if (titleText.trim() !== '') drawWrappedText(ctx, titleText, 500, boxY + 200, boxW - 100, titleSize);
             ctx.textBaseline = "alphabetic"; 
-
             const website = document.getElementById('website').value;
-            const webY = boxY + 430; 
-            ctx.fillStyle = "#a77d43"; 
-            ctx.font = "28px 'Segoe UI', Arial";
-            ctx.fillText(website, 500, webY);
+            ctx.fillStyle = "#a77d43"; ctx.font = "28px 'Segoe UI', Arial"; ctx.fillText(website, 500, boxY + 430);
         }
 
         function drawDesign3() {
             const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
-            gradient.addColorStop(0, "#a77d43"); 
-            gradient.addColorStop(1, "#71836d"); 
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            ctx.strokeStyle = "rgba(220, 220, 220, 0.5)"; 
-            ctx.lineWidth = 2;
-            ctx.strokeRect(-20, 20, 480, 640); 
-            ctx.strokeRect(20, 1020, 960, 460); 
-
+            gradient.addColorStop(0, "#a77d43"); gradient.addColorStop(1, "#71836d"); 
+            ctx.fillStyle = gradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = "rgba(220, 220, 220, 0.5)"; ctx.lineWidth = 2;
+            ctx.strokeRect(-20, 20, 480, 640); ctx.strokeRect(20, 1020, 960, 460); 
             const radius = 0; 
             for (let id = 1; id <= 3; id++) {
-                if (imgState[id].img) {
-                    drawDraggableRoundedImage(imgState[id], radius, true); 
-                } else {
-                    const box = imgState[id].box;
-                    ctx.fillStyle = "rgba(0,0,0,0.2)";
-                    ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); ctx.fill();
-                    ctx.lineWidth = 2; ctx.strokeStyle = "#FFFFFF"; ctx.stroke(); 
-                    ctx.fillStyle = "#FFFFFF"; ctx.font = "30px Arial";
-                    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                if (imgState[id].img) drawDraggableRoundedImage(imgState[id], radius, true); 
+                else {
+                    const box = imgState[id].box; ctx.fillStyle = "rgba(0,0,0,0.2)"; ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); ctx.fill();
+                    ctx.lineWidth = 2; ctx.strokeStyle = "#FFFFFF"; ctx.stroke(); ctx.fillStyle = "#FFFFFF"; ctx.font = "30px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
                     ctx.fillText("Gambar " + id, box.x + (box.w/2), box.y + (box.h/2));
                 }
             }
-
             ctx.fillStyle = "#FFFFFF";
-            const titleText = document.getElementById('titleText').value;
-            const titleSize = parseInt(document.getElementById('titleSize').value);
-            
-            ctx.textAlign = "left";
-            ctx.textBaseline = "middle";
-            if (titleText.trim() !== '') {
-                drawWrappedText(ctx, titleText, 40, 850, 920, titleSize);
-            }
+            const titleText = document.getElementById('titleText').value; const titleSize = parseInt(document.getElementById('titleSize').value);
+            ctx.textAlign = "left"; ctx.textBaseline = "middle";
+            if (titleText.trim() !== '') drawWrappedText(ctx, titleText, 40, 850, 920, titleSize);
             ctx.textBaseline = "alphabetic"; 
-
             const website = document.getElementById('website').value;
-            ctx.textAlign = "right";
-            ctx.font = "30px 'Segoe UI', Arial";
-            ctx.fillText(website, 960, 1000);
+            ctx.textAlign = "right"; ctx.font = "30px 'Segoe UI', Arial"; ctx.fillText(website, 960, 1000);
         }
 
         function drawDesign4() {
-            // Latar belakang putih untuk menciptakan garis pemisah antar gambar
-            ctx.fillStyle = "#FFFFFF";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Area Gradasi Tengah
+            ctx.fillStyle = "#FFFFFF"; ctx.fillRect(0, 0, canvas.width, canvas.height);
             const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
-            gradient.addColorStop(0, "#a77d43"); 
-            gradient.addColorStop(1, "#71836d"); 
-            ctx.fillStyle = gradient;
-            
-            // Menggambar area tengah tempat teks berada (diberi jarak 6px dari gambar untuk border putih)
-            ctx.fillRect(0, 550, 1000, 350);
-
-            // Render 3 Gambar dengan Sudut Siku (Tanpa border garis, menggunakan margin celah)
+            gradient.addColorStop(0, "#a77d43"); gradient.addColorStop(1, "#71836d"); 
+            ctx.fillStyle = gradient; ctx.fillRect(0, 550, 1000, 350);
             const radius = 0; 
             for (let id = 1; id <= 3; id++) {
-                if (imgState[id].img) {
-                    drawDraggableRoundedImage(imgState[id], radius, false); 
-                } else {
-                    const box = imgState[id].box;
-                    ctx.fillStyle = "rgba(0,0,0,0.15)";
-                    ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); ctx.fill();
-                    ctx.fillStyle = "#555555"; ctx.font = "30px Arial";
-                    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                if (imgState[id].img) drawDraggableRoundedImage(imgState[id], radius, false); 
+                else {
+                    const box = imgState[id].box; ctx.fillStyle = "rgba(0,0,0,0.15)"; ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); ctx.fill();
+                    ctx.fillStyle = "#555555"; ctx.font = "30px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
                     ctx.fillText("Gambar " + id, box.x + (box.w/2), box.y + (box.h/2));
                 }
             }
-
-            // Render Teks
             ctx.fillStyle = "#FFFFFF";
-            const titleText = document.getElementById('titleText').value;
-            const titleSize = parseInt(document.getElementById('titleSize').value);
-            
-            ctx.textAlign = "left";
-            ctx.textBaseline = "middle";
-            if (titleText.trim() !== '') {
-                // Judul ditempatkan di tengah-tengah rentang gradasi (Y = 715)
-                drawWrappedText(ctx, titleText, 40, 715, 920, titleSize);
-            }
+            const titleText = document.getElementById('titleText').value; const titleSize = parseInt(document.getElementById('titleSize').value);
+            ctx.textAlign = "left"; ctx.textBaseline = "middle";
+            if (titleText.trim() !== '') drawWrappedText(ctx, titleText, 40, 715, 920, titleSize);
             ctx.textBaseline = "alphabetic"; 
-
             const website = document.getElementById('website').value;
-            ctx.textAlign = "right";
-            ctx.font = "30px 'Segoe UI', Arial";
-            // Posisi website di sudut kanan bawah area gradasi
-            ctx.fillText(website, 960, 870); 
+            ctx.textAlign = "right"; ctx.font = "30px 'Segoe UI', Arial"; ctx.fillText(website, 960, 870); 
+        }
+
+        function toUCS2Array(str) {
+            var arr = [];
+            for (var i = 0; i < str.length; i++) {
+                arr.push(str.charCodeAt(i) & 0xFF);
+                arr.push((str.charCodeAt(i) >> 8) & 0xFF);
+            }
+            arr.push(0); arr.push(0); 
+            return arr;
         }
 
         function downloadPin() {
-            let rawFileName = document.getElementById('fileName').value.trim();
-            if (!rawFileName) rawFileName = 'pin-pinterest-baru';
+            let rawInterior = document.getElementById('metaInterior').value.trim() || 'Interior';
+            let rawRoom = document.getElementById('metaRoom').value.trim() || 'Room';
             
-            let formattedFileName = rawFileName.toLowerCase().replace(/\s+/g, '-');
+            let baseName = `${rawInterior} ${rawRoom} interior design ideas and home decor inspiration`;
+            let formattedFileName = baseName.toLowerCase().replace(/\s+/g, '-') + '.jpg';
 
-            if (!formattedFileName.endsWith('.jpg') && !formattedFileName.endsWith('.jpeg')) {
-                formattedFileName += '.jpg';
+            const metaTitleSubject = `${rawInterior} ${rawRoom} Interior Design Ideas and Home Decor Inspiration`;
+            const metaTags = `${rawRoom} ${rawInterior} style; ${rawRoom} ${rawInterior} design; ${rawRoom} ${rawInterior}; ${rawRoom} ${rawInterior} furniture; ${rawRoom} ${rawInterior} interior design; ${rawInterior} interior design; ${rawInterior} interior; ${rawInterior} interior design style; ${rawInterior} interior design ideas; ${rawInterior} ${rawRoom}; ${rawRoom} ideas; ${rawRoom} ideas for small spaces; ${rawRoom} ideas pinterest; ${rawRoom} ideas decor; ${rawRoom} decor ideas; ${rawRoom} decor; ${rawRoom} design; ${rawRoom} design ideas; ${rawRoom} desk; ${rawRoom} decor ideas ${rawInterior}; ${rawRoom} design inspiration; ${rawRoom} designs for small spaces; ${rawRoom} inspo; ${rawRoom} inspiration; ${rawRoom} inspiration ideas; ${rawRoom} inspo pinterest; ${rawRoom} inspo ideas; home interior design; home decor inspiration; cozy interior; home design;`;
+            const metaComment = `${rawRoom} ${rawInterior} style, ${rawRoom} ${rawInterior} design, ${rawRoom} ${rawInterior}, ${rawRoom} ${rawInterior} furniture, ${rawRoom} ${rawInterior} interior design, ${rawInterior} interior design, ${rawInterior} interior, ${rawInterior} interior design style, ${rawInterior} interior design ideas, ${rawInterior} ${rawRoom}, ${rawRoom} ideas, ${rawRoom} ideas for small spaces, ${rawRoom} ideas pinterest, ${rawRoom} ideas decor, ${rawRoom} decor ideas, ${rawRoom} decor, ${rawRoom} design, ${rawRoom} design ideas, ${rawRoom} desk, ${rawRoom} decor ideas ${rawInterior}, ${rawRoom} design inspiration, ${rawRoom} designs for small spaces, ${rawRoom} inspo, ${rawRoom} inspiration, ${rawRoom} inspiration ideas, ${rawRoom} inspo pinterest, ${rawRoom} inspo ideas, home interior design, home decor inspiration, cozy interior, home design.`;
+
+            var jpegData = canvas.toDataURL('image/jpeg', 0.9);
+
+            try {
+                if (typeof piexif !== 'undefined') {
+                    var zeroth = {};
+                    zeroth[piexif.ImageIFD.Rating] = 5; 
+                    zeroth[40091] = toUCS2Array(metaTitleSubject); 
+                    zeroth[40095] = toUCS2Array(metaTitleSubject); 
+                    zeroth[40094] = toUCS2Array(metaTags);         
+                    zeroth[40092] = toUCS2Array(metaComment);      
+                    var exifObj = {"0th": zeroth, "Exif": {}, "GPS": {}};
+                    var exifBytes = piexif.dump(exifObj);
+                    jpegData = piexif.insert(exifBytes, jpegData);
+                }
+            } catch (e) {
+                console.error("Gagal menyisipkan EXIF Metadata:", e);
             }
 
             const link = document.createElement('a');
             link.download = formattedFileName;
-            link.href = canvas.toDataURL('image/jpeg', 0.9);
+            link.href = jpegData;
             link.click();
         }
     </script>
